@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制项目代码
 COPY nano_graphrag/ ./nano_graphrag/
+COPY api/ ./api/
 COPY delete_utils.py delete_node_edge.py delete_text_chunk.py delete_vdb_entities.py ./
 COPY delete_update_description.py delete_update_description2.py delete_update_description3.py ./
 COPY delete_community.py delete_community_direct_node_edge.py delete_community_indirect.py ./
@@ -22,9 +23,14 @@ COPY delete_community_update_ndoe_cluster.py delete_community_update_reports.py 
 COPY delete_community_update_reports_last.py delete_generate_graphml.py ./
 COPY before_search.py fuzzing_match.py rag_match.py ./
 COPY "delete all.py" ./
+COPY main.py ./
 COPY setup.py readme.md ./
 
 # 安装项目本身
 RUN pip install --no-cache-dir -e .
 
-ENTRYPOINT ["python", "delete all.py"]
+EXPOSE 8000
+
+# 默认启动 API 服务
+# CLI 模式: docker run --entrypoint python <image> "delete all.py" <entity> --yes
+ENTRYPOINT ["python", "main.py"]
