@@ -3,7 +3,7 @@ import numpy as np
 from typing import Optional, List, Any, Callable
 
 import aioboto3
-from openai import AsyncOpenAI, AsyncAzureOpenAI, APIConnectionError, RateLimitError
+from openai import AsyncOpenAI, AsyncAzureOpenAI, APIConnectionError, RateLimitError, APITimeoutError
 
 from tenacity import (
     retry,
@@ -24,7 +24,10 @@ global_amazon_bedrock_async_client = None
 def get_openai_async_client_instance():
     global global_openai_async_client
     if global_openai_async_client is None:
-        global_openai_async_client = AsyncOpenAI()
+        global_openai_async_client = AsyncOpenAI(
+            timeout=300.0,
+            max_retries=0,  # retries handled by tenacity
+        )
     return global_openai_async_client
 
 async def deepseek_v3_complete(
@@ -41,7 +44,10 @@ async def deepseek_v3_complete(
 def get_azure_openai_async_client_instance():
     global global_azure_openai_async_client
     if global_azure_openai_async_client is None:
-        global_azure_openai_async_client = AsyncAzureOpenAI()
+        global_azure_openai_async_client = AsyncAzureOpenAI(
+            timeout=300.0,
+            max_retries=0,  # retries handled by tenacity
+        )
     return global_azure_openai_async_client
 
 
@@ -55,7 +61,7 @@ def get_amazon_bedrock_async_client_instance():
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type((RateLimitError, APIConnectionError)),
+    retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
 )
 async def openai_complete_if_cache(
     model, prompt, system_prompt=None, history_messages=[], **kwargs
@@ -88,7 +94,7 @@ async def openai_complete_if_cache(
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type((RateLimitError, APIConnectionError)),
+    retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
 )
 async def amazon_bedrock_complete_if_cache(
     model, prompt, system_prompt=None, history_messages=[], **kwargs
@@ -188,7 +194,7 @@ async def gpt_4o_mini_complete(
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type((RateLimitError, APIConnectionError)),
+    retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
 )
 async def amazon_bedrock_embedding(texts: list[str]) -> np.ndarray:
     amazon_bedrock_async_client = get_amazon_bedrock_async_client_instance()
@@ -217,7 +223,7 @@ async def amazon_bedrock_embedding(texts: list[str]) -> np.ndarray:
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type((RateLimitError, APIConnectionError)),
+    retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
 )
 async def openai_embedding(texts: list[str]) -> np.ndarray:
     openai_async_client = get_openai_async_client_instance()
@@ -230,7 +236,7 @@ async def openai_embedding(texts: list[str]) -> np.ndarray:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type((RateLimitError, APIConnectionError)),
+    retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
 )
 async def azure_openai_complete_if_cache(
     deployment_name, prompt, system_prompt=None, history_messages=[], **kwargs
@@ -293,7 +299,7 @@ async def azure_gpt_4o_mini_complete(
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type((RateLimitError, APIConnectionError)),
+    retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
 )
 async def azure_openai_embedding(texts: list[str]) -> np.ndarray:
     azure_openai_client = get_azure_openai_async_client_instance()
