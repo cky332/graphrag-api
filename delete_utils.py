@@ -118,16 +118,24 @@ def load_api_config(env_file: str = ".env") -> None:
 
     期望变量: OPENAI_API_KEY, OPENAI_BASE_URL, HTTP_PROXY, HTTPS_PROXY
     """
-    if os.path.isfile(env_file):
-        with open(env_file, "r", encoding="utf-8") as f:
+    abs_path = os.path.abspath(env_file)
+    if os.path.isfile(abs_path):
+        logger.info(f"从 {abs_path} 加载 API 配置")
+        with open(abs_path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     key, value = line.split("=", 1)
                     os.environ.setdefault(key.strip(), value.strip())
+    else:
+        logger.warning(f".env 文件不存在: {abs_path}")
 
     if "OPENAI_API_KEY" not in os.environ:
-        raise RuntimeError("环境变量 OPENAI_API_KEY 未设置，请在 .env 文件或系统环境变量中配置后重试")
+        raise RuntimeError(
+            f"环境变量 OPENAI_API_KEY 未设置。"
+            f"已检查路径: {abs_path} ({'存在' if os.path.isfile(abs_path) else '不存在'})。"
+            f"请在 .env 文件或系统环境变量中配置后重试。"
+        )
 
 
 def validate_entity_exists(graphml_path: str, entity_name: str) -> dict:

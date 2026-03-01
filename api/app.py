@@ -126,6 +126,22 @@ async def check_entity(entity_name: str, cache_dir: str = "cache"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/v1/config/check")
+async def check_config():
+    """检查 API 配置（.env 文件）是否正确加载。
+
+    在提交删除任务前调用此端点，可提前发现配置问题。
+    """
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_file = os.path.join(project_root, ".env")
+    return {
+        "env_file_path": env_file,
+        "env_file_exists": os.path.isfile(env_file),
+        "openai_api_key_set": bool(os.environ.get("OPENAI_API_KEY")),
+        "openai_base_url": os.environ.get("OPENAI_BASE_URL", "(未设置)"),
+    }
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check(cache_dir: str = "cache"):
     """健康检查端点。"""
