@@ -17,16 +17,34 @@ from delete_utils import (
 
 logger = get_logger()
 
-# 确保 API 配置在 import 时加载（与 delete all.py 行为一致）
-load_api_config()
+# 标记是否已完成初始化（API 配置 + 依赖模块导入）
+_initialized = False
 
-from delete_vdb_entities import delete_vdb_entities
-from before_search import extract_entities
-from delete_update_description import update_graphml_descriptions
-from delete_node_edge import remove_node_and_edges
-from delete_community import delete_community_pipeline
-from delete_text_chunk import anonymize_all_chunks
-from delete_community_update_reports_last import update_reports_for_entity
+
+def _ensure_initialized():
+    """延迟加载：首次调用删除时才加载 API 配置和依赖模块。
+
+    这样服务启动时不需要 OPENAI_API_KEY，只有实际执行删除时才需要。
+    """
+    global _initialized
+    if _initialized:
+        return
+
+    load_api_config()
+
+    global delete_vdb_entities, extract_entities, update_graphml_descriptions
+    global remove_node_and_edges, delete_community_pipeline
+    global anonymize_all_chunks, update_reports_for_entity
+
+    from delete_vdb_entities import delete_vdb_entities
+    from before_search import extract_entities
+    from delete_update_description import update_graphml_descriptions
+    from delete_node_edge import remove_node_and_edges
+    from delete_community import delete_community_pipeline
+    from delete_text_chunk import anonymize_all_chunks
+    from delete_community_update_reports_last import update_reports_for_entity
+
+    _initialized = True
 
 
 async def run_deletion(
@@ -39,6 +57,7 @@ async def run_deletion(
     从 delete all.py main() 提取的核心逻辑，去除 argparse 和交互确认。
     成功时返回 DeletionReport，失败时自动从备份恢复并抛出异常。
     """
+    _ensure_initialized()
     vdb_path = os.path.join(cache_dir, "vdb_entities.json")
     graphml_path = os.path.join(cache_dir, "graph_chunk_entity_relation.graphml")
     kv_store_path = os.path.join(cache_dir, "kv_store_text_chunks.json")
